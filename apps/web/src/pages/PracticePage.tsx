@@ -6,6 +6,7 @@ import { BeadBoard } from '@/components/BeadBoard'
 import { useWordGroup } from '@/hooks/useWordGroup'
 import { createMockBeadGrid } from '@/components/BeadBoard/mockData'
 import { pickWordsByDifficulty } from '@/mocks/words'
+import { buildGroup1Sequence } from '@/mocks/group1'
 import { beadGridAtom, loadGridAtom, setPartialUnlockAtom } from '@/store/beadStore'
 import { generateBeadGrid, fetchWordBanks, fetchWords } from '@/lib/api'
 import type { BeadGrid, Word } from '@/types'
@@ -99,6 +100,7 @@ export default function PracticePage() {
   const [banksLoaded, setBanksLoaded] = useState(false)
   const [, setBankOptions] = useState<string[]>(['cet4', 'cet6', 'gre'])
   const [generatingImage, setGeneratingImage] = useState(false)
+  const [mode, setMode] = useState<'wordbank' | 'group1'>('group1')
 
   /* Fetch available word banks from backend */
   useEffect(() => {
@@ -115,33 +117,41 @@ export default function PracticePage() {
 
   const GRID_SIZE = 64
 
-  /* Initialize session: fetch backend first, fallback to mock */
+  /* Initialize session: Group 1 or word bank */
   const initSession = useCallback(async () => {
-    let words: Word[] = []
+    let typingSequence: Word[] = []
+    let wordsForImage: Word[] = []
 
-    // Try backend word bank first
-    try {
-      const bankId = difficulty
-      const fetched = await fetchWords(bankId, 200)
-      const shuffled = [...fetched].sort(() => Math.random() - 0.5)
-      words = shuffled.slice(0, wordCount).map((w, i) => ({
-        id: w.id || `${bankId}_${String(i + 1).padStart(3, '0')}`,
-        name: w.name,
-        trans: w.trans,
-        usphone: w.usphone,
-        ukphone: w.ukphone,
-        category: w.category || bankId.toUpperCase(),
-      }))
-    } catch (err) {
-      console.warn('Backend word bank unavailable, using mock:', err)
-      words = pickWordsByDifficulty(wordCount, difficulty)
+    if (mode === 'group1') {
+      typingSequence = buildGroup1Sequence()
+      wordsForImage = typingSequence.filter((w) => !w.isSentence)
+    } else {
+      // Try backend word bank first
+      try {
+        const bankId = difficulty
+        const fetched = await fetchWords(bankId, 200)
+        const shuffled = [...fetched].sort(() => Math.random() - 0.5)
+        typingSequence = shuffled.slice(0, wordCount).map((w, i) => ({
+          id: w.id || `${bankId}_${String(i + 1).padStart(3, '0')}`,
+          name: w.name,
+          trans: w.trans,
+          usphone: w.usphone,
+          ukphone: w.ukphone,
+          category: w.category || bankId.toUpperCase(),
+        }))
+        wordsForImage = typingSequence
+      } catch (err) {
+        console.warn('Backend word bank unavailable, using mock:', err)
+        typingSequence = pickWordsByDifficulty(wordCount, difficulty)
+        wordsForImage = typingSequence
+      }
     }
 
     // Generate bead grid
     setGeneratingImage(true)
     try {
       const res = await generateBeadGrid({
-        words: words.map((w) => ({ id: w.id, name: w.name, trans: w.trans, usphone: w.usphone })),
+        words: wordsForImage.map((w) => ({ id: w.id, name: w.name, trans: w.trans, usphone: w.usphone })),
         gridSize: GRID_SIZE,
         strategy: 'nature',
       })
@@ -153,18 +163,18 @@ export default function PracticePage() {
       loadGrid(grid)
       setThemeExplanation(res.themeExplanation)
       setImageUrl(res.imageUrl)
-      startPractice(words, GRID_SIZE, grid, repsPerWord)
+      startPractice(typingSequence, GRID_SIZE, grid, repsPerWord)
     } catch (err) {
       console.warn('Backend image gen unavailable, using mock:', err)
       const { beads, blocks } = createMockBeadGrid(GRID_SIZE)
       const grid: BeadGrid = { gridSize: GRID_SIZE, beads, blocks }
       loadGrid(grid)
       setImageUrl(null)
-      startPractice(words, GRID_SIZE, grid, repsPerWord)
+      startPractice(typingSequence, GRID_SIZE, grid, repsPerWord)
     } finally {
       setGeneratingImage(false)
     }
-  }, [startPractice, loadGrid, difficulty, wordCount, repsPerWord])
+  }, [startPractice, loadGrid, difficulty, wordCount, repsPerWord, mode])
 
   useEffect(() => {
     if (phase === 'idle' && banksLoaded) {
@@ -295,6 +305,35 @@ export default function PracticePage() {
                 准备开始
               </h3>
 
+              {/* Mode selector */}
+              <div className="w-full">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
+                  学习模式
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setMode('group1')}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                      mode === 'group1'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-card text-foreground border-border hover:bg-muted'
+                    }`}
+                  >
+                    Unit 4-6 「热浪绿洲」
+                  </button>
+                  <button
+                    onClick={() => setMode('wordbank')}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                      mode === 'wordbank'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-card text-foreground border-border hover:bg-muted'
+                    }`}
+                  >
+                    词库随机
+                  </button>
+                </div>
+              </div>
+
               {/* Difficulty selector */}
               <div className="w-full space-y-4">
                 <div>
@@ -367,7 +406,9 @@ export default function PracticePage() {
               </div>
 
               <p className="text-sm text-muted-foreground text-center">
-                本组共 {wordCount} 个{DIFFICULTY_LABELS[difficulty]}，每个单词需连续正确输入 {repsPerWord} 遍。
+                {mode === 'group1'
+                  ? `本组共 7 个单词 + 2 条例句，每个需连续正确输入 ${repsPerWord} 遍。`
+                  : `本组共 ${wordCount} 个${DIFFICULTY_LABELS[difficulty]}，每个单词需连续正确输入 ${repsPerWord} 遍。`}
               </p>
               <button
                 onClick={handleStart}
@@ -391,7 +432,7 @@ export default function PracticePage() {
                 <p>⏱ 用时: {formatTime(elapsedMs)}</p>
                 <p>🎯 正确率: {accuracy}%</p>
                 <p className="text-xs text-muted-foreground">
-                  {DIFFICULTY_LABELS[difficulty]} · {totalWords} 词 · {repsPerWord} 遍/词
+                  {mode === 'group1' ? 'Unit 4-6 「热浪绿洲」' : `${DIFFICULTY_LABELS[difficulty]} · ${totalWords} 词`} · {repsPerWord} 遍/词
                 </p>
               </div>
               <button

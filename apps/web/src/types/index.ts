@@ -1,3 +1,11 @@
+export interface SentenceItem {
+  id: string
+  text: string
+  translation: string
+  highlightWords: string[]
+  source?: string
+}
+
 export interface Word {
   id: string
   name: string
@@ -5,6 +13,12 @@ export interface Word {
   usphone?: string
   ukphone?: string
   category: string
+  /** If true, this "word" is actually a sentence/phrase to be typed */
+  isSentence?: boolean
+  /** For sentences: which words from the group appear in this sentence */
+  highlightWords?: string[]
+  /** For sentences: the original sentence data */
+  sentenceData?: SentenceItem
 }
 
 export interface UserProgress {

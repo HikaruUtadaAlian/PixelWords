@@ -1,3 +1,11 @@
+export interface SentenceItem {
+  id: string;
+  text: string;
+  translation: string;
+  highlightWords: string[];
+  source?: string;
+}
+
 export interface Word {
   id: string;
   name: string;
@@ -5,6 +13,9 @@ export interface Word {
   usphone?: string;
   ukphone?: string;
   category: string;
+  isSentence?: boolean;
+  highlightWords?: string[];
+  sentenceData?: SentenceItem;
 }
 
 export interface WordGroup {
