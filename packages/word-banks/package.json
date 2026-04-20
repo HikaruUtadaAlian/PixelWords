@@ -1,0 +1,9 @@
+{
+  "name": "@pixelwords/word-banks",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./cet4.json",
+  "files": [
+    "*.json"
+  ]
+}
