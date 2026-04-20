@@ -20,7 +20,7 @@ export const MOCK_COLORS = ['#E74C3C', '#3498DB', '#E67E22', '#27AE60', '#2980B9
  * Create a simple mock bead grid with 5 word blocks.
  * Uses a Voronoi-like assignment for organic block shapes.
  */
-export function createMockBeadGrid(gridSize = 30): {
+export function createMockBeadGrid(gridSize = 64): {
   beads: BeadData[][]
   blocks: WordBlock[]
 } {
@@ -93,7 +93,7 @@ export function createMockBeadGrid(gridSize = 30): {
  * Generate progressively more unlocked states for demo/testing.
  */
 export function createMockUnlockSequence(
-  gridSize = 30
+  gridSize = 64
 ): Array<{ beads: BeadData[][]; unlockedBlocks: Set<string> }> {
   const { beads } = createMockBeadGrid(gridSize)
   const sequence: Array<{ beads: BeadData[][]; unlockedBlocks: Set<string> }> = []

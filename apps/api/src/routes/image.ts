@@ -23,7 +23,7 @@ function getMockExplanation(words: { name: string }[]): string {
 
 router.post("/generate", async (req, res) => {
   try {
-    const { words, gridSize = 20, strategy = "nature" } = req.body as GenerateImageRequest;
+    const { words, gridSize = 64, strategy = "nature" } = req.body as GenerateImageRequest;
 
     if (!words || words.length === 0) {
       res.status(400).json({ error: "words array is required" });

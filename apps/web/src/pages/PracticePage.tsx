@@ -113,7 +113,7 @@ export default function PracticePage() {
       })
   }, [])
 
-  const GRID_SIZE = 48
+  const GRID_SIZE = 64
 
   /* Initialize session: fetch backend first, fallback to mock */
   const initSession = useCallback(async () => {
@@ -473,7 +473,7 @@ export default function PracticePage() {
                   className="w-full rounded-xl"
                 />
                 <p className="text-xs text-muted-foreground mt-3 text-center">
-                  左侧拼豆画板为该图的 48×48 像素化处理结果
+                  左侧拼豆画板为该图的 64×64 像素化处理结果
                 </p>
               </div>
             </motion.div>
