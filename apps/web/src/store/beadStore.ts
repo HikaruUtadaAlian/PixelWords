@@ -136,6 +136,50 @@ export const setPartialUnlockAtom = atom(null, (_get, set, wordName: string, pct
   }
 })
 
+/** Set partial unlock for multiple word blocks at once (used by sentences) */
+export const setPartialUnlockMultiAtom = atom(null, (_get, set, updates: Array<{ wordName: string; pct: number }>) => {
+  const grid = _get(beadGridAtom)
+  if (!grid) return
+
+  const newBeads = grid.beads.map((row) => row.map((b) => ({ ...b })))
+  const map = new Map(_get(partialUnlocksAtom))
+  const unlockedSet = new Set(_get(unlockedBlocksAtom))
+
+  for (const { wordName, pct } of updates) {
+    const block = grid.blocks.find((b) => b.wordName === wordName)
+    if (!block) continue
+
+    const clamped = Math.min(1, Math.max(0, pct))
+    const count = Math.round(block.cells.length * clamped)
+
+    const cx = block.cells.reduce((s, c) => s + c.x, 0) / block.cells.length
+    const cy = block.cells.reduce((s, c) => s + c.y, 0) / block.cells.length
+    const sorted = [...block.cells].sort(
+      (a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy)
+    )
+
+    block.cells.forEach(({ x, y }) => {
+      if (newBeads[y] && newBeads[y][x]) {
+        newBeads[y][x].isUnlocked = false
+      }
+    })
+    sorted.slice(0, count).forEach(({ x, y }) => {
+      if (newBeads[y] && newBeads[y][x]) {
+        newBeads[y][x].isUnlocked = true
+      }
+    })
+
+    map.set(wordName, clamped)
+    if (clamped >= 1) {
+      unlockedSet.add(wordName)
+    }
+  }
+
+  set(beadGridAtom, { ...grid, beads: newBeads })
+  set(partialUnlocksAtom, map)
+  set(unlockedBlocksAtom, unlockedSet)
+})
+
 /** Reset grid (new session) */
 export const resetGridAtom = atom(null, (_get, set) => {
   set(beadGridAtom, null)

@@ -7,7 +7,7 @@ import { useWordGroup } from '@/hooks/useWordGroup'
 import { createMockBeadGrid } from '@/components/BeadBoard/mockData'
 import { pickWordsByDifficulty } from '@/mocks/words'
 import { buildGroup1Sequence } from '@/mocks/group1'
-import { beadGridAtom, loadGridAtom, setPartialUnlockAtom } from '@/store/beadStore'
+import { beadGridAtom, loadGridAtom, setPartialUnlockAtom, setPartialUnlockMultiAtom } from '@/store/beadStore'
 import { generateBeadGrid, fetchWordBanks, fetchWords } from '@/lib/api'
 import type { BeadGrid, Word } from '@/types'
 import { Sparkles, Keyboard, Target, BookOpen, Eye, X } from 'lucide-react'
@@ -87,6 +87,7 @@ export default function PracticePage() {
   const beadGrid = useAtomValue(beadGridAtom)
   const loadGrid = useSetAtom(loadGridAtom)
   const setPartialUnlock = useSetAtom(setPartialUnlockAtom)
+  const setPartialUnlockMulti = useSetAtom(setPartialUnlockMultiAtom)
 
   const [themeExplanation, setThemeExplanation] = useState(
     "这幅拼豆画的灵感来自星空与海洋的交汇——正如单词所描绘的那样，自由的思想在广阔的宇宙中遨游，每一个词汇都是一颗独特的星辰。"
@@ -198,13 +199,22 @@ export default function PracticePage() {
 
   const handleLetterProgress = useCallback(
     (progress: number) => {
-      if (currentSession) {
-        const completedReps = currentSession.targetReps - currentSession.remainingReps
-        const cumulative = (completedReps + progress) / currentSession.targetReps
+      if (!currentSession) return
+      const completedReps = currentSession.targetReps - currentSession.remainingReps
+      const cumulative = (completedReps + progress) / currentSession.targetReps
+
+      if (currentSession.word.isSentence && currentSession.word.highlightWords?.length) {
+        // Sentence: distribute progress across all highlighted word blocks
+        const updates = currentSession.word.highlightWords.map((wordName) => ({
+          wordName,
+          pct: cumulative,
+        }))
+        setPartialUnlockMulti(updates)
+      } else {
         setPartialUnlock(currentSession.word.name, cumulative)
       }
     },
-    [currentSession, setPartialUnlock]
+    [currentSession, setPartialUnlock, setPartialUnlockMulti]
   )
 
   /* Auto-advance after feedback */

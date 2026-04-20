@@ -19,7 +19,7 @@ function validateInput(input: string, target: string): CharResult[] {
     if (i < input.length) {
       results.push({
         char: target[i],
-        status: input[i] === target[i] ? 'correct' : 'wrong',
+        status: input[i].toLowerCase() === target[i].toLowerCase() ? 'correct' : 'wrong',
       })
     } else {
       results.push({
@@ -86,13 +86,9 @@ export function useTypingEngine(targetWord: string): UseTypingEngineReturn {
 
       if (e.key.length !== 1) return
 
-      const nextInput = input + e.key
-      setInput(nextInput)
-      setPhase('inputting')
-
-      /* Check correctness at every keystroke (qwerty-learner style) */
-      const idx = nextInput.length - 1
-      if (nextInput[idx] !== target[idx]) {
+      // Case-insensitive check
+      const idx = input.length
+      if (e.key.toLowerCase() !== target[idx]?.toLowerCase()) {
         /* Mistake: lock, shake, then reset */
         isLocked.current = true
         setPhase('wrong')
@@ -106,6 +102,28 @@ export function useTypingEngine(targetWord: string): UseTypingEngineReturn {
         }, 300)
         return
       }
+
+      let nextInput = input + e.key
+
+      // Auto-fill spaces and punctuation that follows them
+      while (nextInput.length < target.length) {
+        const nextChar = target[nextInput.length]
+        if (nextChar === ' ' || nextChar === '\u00A0') {
+          nextInput += ' '
+        } else if (
+          // Auto-fill common punctuation attached to spaces (e.g. ", ", ". ")
+          [',', '.', '!', '?', ';', ':', '"', "'"].includes(nextChar) &&
+          nextInput.length + 1 < target.length &&
+          target[nextInput.length + 1] === ' '
+        ) {
+          nextInput += nextChar + ' '
+        } else {
+          break
+        }
+      }
+
+      setInput(nextInput)
+      setPhase('inputting')
 
       /* Fully correct */
       if (nextInput === target) {

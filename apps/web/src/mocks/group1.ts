@@ -79,37 +79,27 @@ export const GROUP1_CLIMAX_SENTENCE: SentenceItem = {
 }
 
 /**
- * Build the full typing sequence: words interleaved with sentences.
- * Pattern: Word1 → Word2 → Sentence1 → Word3 → Word4 → Sentence2 → ...
+ * Build the full typing sequence: words + sentences shuffled randomly.
+ * Sentences and words are mixed together in random order.
  */
 export function buildGroup1Sequence(): Word[] {
-  const words = [...GROUP1_WORDS]
-  const sentences = [...GROUP1_SENTENCES]
-  const sequence: Word[] = []
+  const wordItems: Word[] = [...GROUP1_WORDS]
+  const sentenceItems: Word[] = GROUP1_SENTENCES.map((s) => ({
+    id: s.id,
+    name: s.text,
+    trans: [s.translation],
+    category: 'Unit 4-6',
+    isSentence: true as const,
+    highlightWords: s.highlightWords,
+    sentenceData: s,
+  }))
 
-  let wIdx = 0
-  let sIdx = 0
-
-  // Interleave: 2 words → 1 sentence → repeat
-  while (wIdx < words.length || sIdx < sentences.length) {
-    // Add up to 2 words
-    for (let i = 0; i < 2 && wIdx < words.length; i++) {
-      sequence.push(words[wIdx++])
-    }
-    // Add 1 sentence if available
-    if (sIdx < sentences.length) {
-      const s = sentences[sIdx++]
-      sequence.push({
-        id: s.id,
-        name: s.text,
-        trans: [s.translation],
-        category: 'Unit 4-6',
-        isSentence: true,
-        highlightWords: s.highlightWords,
-        sentenceData: s,
-      })
-    }
+  // Fisher-Yates shuffle
+  const all = [...wordItems, ...sentenceItems]
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[all[i], all[j]] = [all[j], all[i]]
   }
 
-  return sequence
+  return all
 }
